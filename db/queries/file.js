@@ -46,25 +46,43 @@ export async function getFiles() {
     return rows
 }
 
-  export async function getFilesInFolder(id) {
-    // TODO
-    const sql = `
-    SELECT folders.name, folders.id as folder_ids, files.*  FROM files
-    JOIN folders ON files.folder_id = folders.id
-    WHERE folder_id = $1`;
+export async function getFilesInFolder(id) {
+    // 1. Get the folder itself
+    const folderSql = `SELECT * FROM folders WHERE id = $1`;
+    const { rows: folderRows } = await db.query(folderSql, [id]);
+    if (folderRows.length === 0) return null; // folder not found
   
-    const {rows}  = await db.query(sql, [id]);
-    return rows;
+    const folder = folderRows[0];
+  
+    const filesSql = `SELECT * FROM files WHERE folder_id = $1`;
+    const { rows: fileRows } = await db.query(filesSql, [id]);
+  
+    return {
+      ...folder,
+      files: fileRows,
+    };
   }
 
   export async function createFileInFolder({name, size, folder_id}) {
     // TODO
+
+
+    const doesFolderExist = await db.query(
+      `SELECT * FROM folders WHERE id = $1`,
+      [folder_id]
+    );
+
+    if (doesFolderExist.rows.length === 0) {
+      return null; 
+    }
+
+    //excutes the actual query and returns something
     const sql = `
     INSERT INTO files (name, size, folder_id)
     VALUES ($1, $2, $3)
     RETURNING *
     `;
   
-    const {rows}  = await db.query(sql, [id]);
+    const {rows}  = await db.query(sql, [name, size, folder_id]);
     return rows[0];
   }
